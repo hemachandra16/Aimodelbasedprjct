@@ -47,18 +47,21 @@ export default function Navbar({
 
         {/* Row 2 / Center: State Tuple inline with badge (badge visible on md+) */}
         <div className="flex-1 flex items-center justify-center gap-3">
-          <div className="text-[32px] md:text-[40px] font-[800] font-mono text-white leading-none tracking-tighter flex items-center">
-            <AnimatePresence mode="popLayout">
-              <motion.span
-                key={currentState.join(',')}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 1.1, opacity: 0 }}
-                className="inline-block"
-              >
-                ({currentState[0]}, {currentState[1]}, {currentState[2]})
-              </motion.span>
-            </AnimatePresence>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3">
+            <span className="text-[13px] md:text-[16px] text-[#ffffff] font-mono tracking-tight mt-0 md:mt-1">State (A,B,C) =</span>
+            <div className="text-[32px] md:text-[40px] font-[800] font-mono text-white leading-none tracking-tighter flex items-center mt-1 md:mt-0">
+              <AnimatePresence mode="popLayout">
+                <motion.span
+                  key={currentState.join(',')}
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 1.1, opacity: 0 }}
+                  className="inline-block"
+                >
+                  ({currentState[0]}, {currentState[1]}, {currentState[2]})
+                </motion.span>
+              </AnimatePresence>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-1.5 uppercase tracking-widest text-[10px]" style={{ color: statusConfig.color }}>
              <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`}></span>

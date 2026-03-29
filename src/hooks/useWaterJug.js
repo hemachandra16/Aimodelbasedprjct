@@ -14,6 +14,7 @@ export function useWaterJug() {
   const manualStepCount = useRef(0);
   const solvingRef = useRef(false);
   const cachedResult = useRef(null);
+  const stepIndexRef = useRef(1);
 
   const checkGoal = useCallback((state) => {
     if (isGoal(state)) {
@@ -35,11 +36,46 @@ export function useWaterJug() {
     manualStepCount.current += 1;
     
     const stepNumber = actionLog.length;
-    setActionLog(prev => [...prev, { state: newState, operator: op, stepNumber }]);
-    
     const newId = getStateString(newState);
     const goalReached = checkGoal(newState);
+
+    if (isStepMode) {
+      if (!cachedResult.current) {
+          const result = solveBFS();
+          const solutionIds = new Set(result.solution.map(s => getStateString(s.state)));
+          const mappedExplored = result.explored.map(n => ({
+              ...n,
+              isPath: solutionIds.has(getStateString(n.state)),
+              isGoal: isGoal(n.state)
+          }));
+          cachedResult.current = { solution: result.solution, explored: mappedExplored };
+      }
+      
+      const { solution, explored } = cachedResult.current;
+      const currentIndex = stepIndexRef.current;
+      
+      let matchesPath = false;
+      if (currentIndex < solution.length) {
+          const expectedStep = solution[currentIndex];
+          if (getStateString(expectedStep.state) === newId) {
+             matchesPath = true;
+          }
+      }
+
+      setActionLog(prev => [...prev, { state: newState, operator: op, stepNumber }]);
+      
+      if (matchesPath) {
+          const nodesUpToLevel = explored.filter(n => n.level <= currentIndex);
+          setGraphNodes(nodesUpToLevel);
+          stepIndexRef.current += 1;
+      }
+      
+      setCurrentState(newState);
+      if (!goalReached) setStatus('INITIAL');
+      return;
+    }
     
+    setActionLog(prev => [...prev, { state: newState, operator: op, stepNumber }]);
     setGraphNodes(prev => {
       const exists = prev.find(n => n.id === newId);
       if (exists) return prev;
@@ -57,7 +93,7 @@ export function useWaterJug() {
     setCurrentState(newState);
     if (!goalReached) setStatus('INITIAL');
 
-  }, [currentState, status, actionLog.length, checkGoal]);
+  }, [currentState, status, actionLog.length, checkGoal, isStepMode]);
 
   const autoSolve = useCallback(async () => {
     if (status === 'SOLVING' || status === 'GOAL') return;
@@ -67,6 +103,7 @@ export function useWaterJug() {
 
     setStatus('SOLVING');
     solvingRef.current = true;
+    stepIndexRef.current = 1;
     
     setCurrentState(INITIAL_STATE);
     setActionLog([{ state: INITIAL_STATE, operator: null, stepNumber: 0 }]);
@@ -128,26 +165,28 @@ export function useWaterJug() {
             setCurrentState(INITIAL_STATE);
             setActionLog([{ state: INITIAL_STATE, operator: null, stepNumber: 0 }]);
             setGraphNodes([]);
+            stepIndexRef.current = 1;
         }
     }
     
     const { solution, explored } = cachedResult.current;
     if (!solution) return;
     
-    const nextIndex = actionLog.length;
+    const currentIndex = stepIndexRef.current;
     
-    if (nextIndex < solution.length) {
-        const step = solution[nextIndex];
+    if (currentIndex < solution.length) {
+        const step = solution[currentIndex];
         const isCurrentGoal = isGoal(step.state);
         
         setCurrentState(step.state);
-        const operatorThatLedHere = solution[nextIndex - 1].operator;
+        const operatorThatLedHere = solution[currentIndex - 1].operator;
         
-        setActionLog(prev => [...prev, { state: step.state, operator: operatorThatLedHere, stepNumber: nextIndex }]);
+        setActionLog(prev => [...prev, { state: step.state, operator: operatorThatLedHere, stepNumber: prev.length }]);
         
-        // Push all explored nodes up to this level
-        const nodesUpToLevel = explored.filter(n => n.level <= nextIndex);
+        const nodesUpToLevel = explored.filter(n => n.level <= currentIndex);
         setGraphNodes(nodesUpToLevel);
+        
+        stepIndexRef.current += 1;
 
         if (isCurrentGoal) {
             setStatus('GOAL');
@@ -157,12 +196,13 @@ export function useWaterJug() {
     } else {
       setStatus('GOAL');
     }
-  }, [status, actionLog, currentState]);
+  }, [status, currentState]);
 
   const reset = useCallback(() => {
     solvingRef.current = false;
     cachedResult.current = null;
     manualStepCount.current = 0;
+    stepIndexRef.current = 1;
     setCurrentState(INITIAL_STATE);
     setStatus('INITIAL');
     setActionLog([{ state: INITIAL_STATE, operator: null, stepNumber: 0 }]);
