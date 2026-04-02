@@ -1,9 +1,9 @@
 import React from 'react';
 
-export default function AIConcepts({ stepCount }) {
+export default function AIConcepts({ stepCount, algorithm = 'BFS' }) {
   const concepts = [
     { label: "Problem Type", value: "State Space Search" },
-    { label: "Algorithm", value: "Breadth-First Search" },
+    { label: "Algorithm", value: algorithm === 'BFS' ? "Breadth-First Search" : "Depth-First Search" },
     { label: "Initial State", value: "(8, 0, 0)" },
     { label: "Goal State", value: "(4, 4, 0)" },
     { label: "Operators", value: "6 Types" },
@@ -12,10 +12,10 @@ export default function AIConcepts({ stepCount }) {
 
   return (
     <div className="w-full bg-[#000000] border-b border-[#1a1a1a] flex flex-col">
-      <div className="w-full flex justify-start md:justify-center py-2 px-6 overflow-x-auto custom-scrollbar">
+      <div className="w-full flex justify-start md:justify-center py-2 px-6 overflow-x-auto custom-scrollbar flex-nowrap" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex flex-row items-center divide-x divide-[#1a1a1a] whitespace-nowrap min-w-max">
           {concepts.map((c, i) => (
-            <div key={i} className="flex flex-col px-4 md:px-6 first:pl-0 last:pr-0 text-center">
+            <div key={i} className="flex flex-col px-4 md:px-6 first:pl-0 last:pr-0 text-center shrink-0">
               <span className="text-[11px] text-[#888888] font-[400] mb-[2px]">
                 {c.label}
               </span>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function BFSGraph({ nodes }) {
+export default function BFSGraph({ nodes, algorithm = 'BFS' }) {
   const scrollRef = useRef(null);
   const [showFullTree, setShowFullTree] = useState(false);
 
@@ -30,7 +30,7 @@ export default function BFSGraph({ nodes }) {
     <div className="bg-[#000000] p-6 md:p-8 mt-6 w-full max-h-[60vh] md:max-h-none h-[60vh] md:h-[600px] flex flex-col relative overflow-hidden border-t border-[#1a1a1a]">
       <div className="flex justify-between items-center mb-6 sticky top-0 z-10 w-full pb-2 bg-[#000000]">
         <h2 className="text-[13px] md:text-[15px] font-[700] tracking-[1px] text-white m-0">
-          BFS Exploration Tree
+          {algorithm} Exploration Tree
         </h2>
         
         <label className="flex items-center gap-3 cursor-pointer select-none">

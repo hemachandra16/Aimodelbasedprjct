@@ -19,6 +19,12 @@ function App() {
     setPlaybackSpeed,
     isStepMode,
     setIsStepMode,
+    algorithm,
+    setAlgorithm,
+    algorithmStats,
+    explainMode,
+    setExplainMode,
+    currentExplanation,
     nextStep,
     manualPour,
     autoSolve,
@@ -39,10 +45,15 @@ function App() {
         isStepMode={isStepMode}
         setIsStepMode={setIsStepMode}
         nextStep={nextStep}
+        algorithm={algorithm}
+        setAlgorithm={setAlgorithm}
+        algorithmStats={algorithmStats}
+        explainMode={explainMode}
+        setExplainMode={setExplainMode}
       />
 
       {/* ZONE 4: Static Strip AI Concepts */}
-      <AIConcepts stepCount={actionLog.length - 1} />
+      <AIConcepts stepCount={actionLog.length - 1} algorithm={algorithm} />
       
       {/* GOAL BANNER (Inline Flowing) */}
       <GoalBanner status={status} />
@@ -61,14 +72,18 @@ function App() {
 
           {/* Right Column (Action Log) */}
           <div className="w-full lg:w-2/5 flex flex-col h-full">
-             <ActionLog logs={actionLog} />
+             <ActionLog 
+               logs={actionLog} 
+               explainMode={explainMode} 
+               currentExplanation={currentExplanation} 
+             />
           </div>
           
         </div>
 
-        {/* ZONE 3: BFS Graph */}
+        {/* ZONE 3: BFS/DFS Graph */}
         <div className="w-full">
-          <BFSGraph nodes={graphNodes} />
+          <BFSGraph nodes={graphNodes} algorithm={algorithm} />
         </div>
 
       </main>

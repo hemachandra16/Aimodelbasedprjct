@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isGoal } from '../utils/bfs';
 
-export default function ActionLog({ logs }) {
+export default function ActionLog({ logs, explainMode, currentExplanation }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -76,6 +76,48 @@ export default function ActionLog({ logs }) {
           })}
         </AnimatePresence>
       </div>
+
+      {/* Explain Card — pinned at bottom of action log */}
+      {explainMode && currentExplanation && (
+        <div
+          style={{
+            borderTop: '1px solid #1a1a1a',
+            borderRight: 'none',
+            borderBottom: 'none',
+            borderLeft: '2px solid #7b61ff',
+            background: '#0d0d0d',
+            padding: '12px',
+            marginTop: '0',
+            maxHeight: '80px',
+            overflow: 'hidden'
+          }}
+          className="md:max-h-none md:overflow-visible"
+        >
+          <div style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '12px',
+            color: '#ffffff',
+            marginBottom: '4px'
+          }}>
+            Action: {currentExplanation.action}
+          </div>
+          <div style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '11px',
+            color: '#888888',
+            marginBottom: '4px'
+          }}>
+            Reason: {currentExplanation.reason}
+          </div>
+          <div style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: '12px',
+            color: '#7b61ff'
+          }}>
+            Result: ({currentExplanation.result[0]}, {currentExplanation.result[1]}, {currentExplanation.result[2]})
+          </div>
+        </div>
+      )}
     </div>
   );
 }

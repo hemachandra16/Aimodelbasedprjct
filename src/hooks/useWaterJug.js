@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { INITIAL_STATE, solveBFS, applyOperator, isGoal, OPERATORS, getStateString } from '../utils/bfs';
+import { INITIAL_STATE, solveBFS, applyOperator, isGoal, OPERATORS, getStateString, CAPACITIES } from '../utils/bfs';
+import { solveDFS } from '../utils/dfs';
 
 export function useWaterJug() {
   const [currentState, setCurrentState] = useState(INITIAL_STATE);
@@ -11,10 +12,45 @@ export function useWaterJug() {
     { id: getStateString(INITIAL_STATE), state: INITIAL_STATE, parentId: null, isPath: true, isGoal: false, level: 0 }
   ]);
   
+  // Feature 2: Algorithm toggle
+  const [algorithm, setAlgorithm] = useState('BFS');
+  const [algorithmStats, setAlgorithmStats] = useState(null);
+
+  // Feature 3: Explain mode
+  const [explainMode, setExplainMode] = useState(false);
+  const [currentExplanation, setCurrentExplanation] = useState(null);
+
   const manualStepCount = useRef(0);
   const solvingRef = useRef(false);
   const cachedResult = useRef(null);
   const stepIndexRef = useRef(1);
+
+  // CRITICAL: invalidate cache when algorithm changes
+  useEffect(() => {
+    cachedResult.current = null;
+  }, [algorithm]);
+
+  const solve = useCallback(() => {
+    return algorithm === 'BFS' ? solveBFS() : solveDFS();
+  }, [algorithm]);
+
+  const jugLabels = ['A', 'B', 'C'];
+
+  const computeExplanation = useCallback((operator, stateBefore, stateAfter) => {
+    if (!operator || !stateBefore || !stateAfter) return null;
+    const fromIdx = operator.from;
+    const toIdx = operator.to;
+    const fromLabel = jugLabels[fromIdx];
+    const toLabel = jugLabels[toIdx];
+    const amountBefore = stateBefore[fromIdx];
+    const spaceAvailable = CAPACITIES[toIdx] - stateBefore[toIdx];
+    const amountPoured = Math.min(amountBefore, spaceAvailable);
+    return {
+      action: operator.name,
+      reason: `Jug ${fromLabel} had ${amountBefore}L. Jug ${toLabel} had ${spaceAvailable}L space. Poured ${amountPoured}L from ${fromLabel} to ${toLabel}.`,
+      result: [...stateAfter]
+    };
+  }, []);
 
   const checkGoal = useCallback((state) => {
     if (isGoal(state)) {
@@ -39,9 +75,14 @@ export function useWaterJug() {
     const newId = getStateString(newState);
     const goalReached = checkGoal(newState);
 
+    // Explain mode
+    if (explainMode && op) {
+      setCurrentExplanation(computeExplanation(op, currentState, newState));
+    }
+
     if (isStepMode) {
       if (!cachedResult.current) {
-          const result = solveBFS();
+          const result = solve();
           const solutionIds = new Set(result.solution.map(s => getStateString(s.state)));
           const mappedExplored = result.explored.map(n => ({
               ...n,
@@ -93,12 +134,12 @@ export function useWaterJug() {
     setCurrentState(newState);
     if (!goalReached) setStatus('INITIAL');
 
-  }, [currentState, status, actionLog.length, checkGoal, isStepMode]);
+  }, [currentState, status, actionLog.length, checkGoal, isStepMode, explainMode, solve, computeExplanation]);
 
   const autoSolve = useCallback(async () => {
     if (status === 'SOLVING' || status === 'GOAL') return;
     
-    const result = solveBFS();
+    const result = solve();
     if (!result.solution) return;
 
     setStatus('SOLVING');
@@ -137,22 +178,36 @@ export function useWaterJug() {
                     if (prev.find(p => getStateString(p.state) === node.id)) return prev;
                     return [...prev, { state: solStep.state, operator: node.operatorSource, stepNumber: node.level }];
                 });
+
+                // Explain mode for autoSolve
+                if (explainMode && node.operatorSource) {
+                  const prevSolIndex = result.solution.findIndex(s => getStateString(s.state) === node.id);
+                  const prevState = prevSolIndex > 0 ? result.solution[prevSolIndex - 1].state : INITIAL_STATE;
+                  setCurrentExplanation(computeExplanation(node.operatorSource, prevState, node.state));
+                }
             }
         }
 
         if (isCurrentGoal) {
             setStatus('GOAL');
             solvingRef.current = false;
+
+            // Set algorithm stats after solve completes
+            setAlgorithmStats({
+              statesExplored: result.explored.length,
+              steps: result.solution.length - 1,
+              pathOptimal: algorithm === 'BFS'
+            });
         }
     }
-  }, [status, playbackSpeed]);
+  }, [status, playbackSpeed, solve, explainMode, algorithm, computeExplanation]);
 
   const nextStep = useCallback(() => {
     if (status === 'SOLVING' || status === 'GOAL') return;
     setStatus('SOLVING'); 
     
     if (!cachedResult.current) {
-        const result = solveBFS();
+        const result = solve();
         const solutionIds = new Set(result.solution.map(s => getStateString(s.state)));
         const mappedExplored = result.explored.map(n => ({
             ...n,
@@ -188,15 +243,28 @@ export function useWaterJug() {
         
         stepIndexRef.current += 1;
 
+        // Explain mode for nextStep
+        if (explainMode && operatorThatLedHere) {
+          const prevState = solution[currentIndex - 1].state;
+          setCurrentExplanation(computeExplanation(operatorThatLedHere, prevState, step.state));
+        }
+
         if (isCurrentGoal) {
             setStatus('GOAL');
+
+            // Set algorithm stats on goal
+            setAlgorithmStats({
+              statesExplored: explored.length,
+              steps: solution.length - 1,
+              pathOptimal: algorithm === 'BFS'
+            });
         } else {
             setStatus('INITIAL');
         }
     } else {
       setStatus('GOAL');
     }
-  }, [status, currentState]);
+  }, [status, currentState, solve, explainMode, algorithm, computeExplanation]);
 
   const reset = useCallback(() => {
     solvingRef.current = false;
@@ -206,6 +274,8 @@ export function useWaterJug() {
     setCurrentState(INITIAL_STATE);
     setStatus('INITIAL');
     setActionLog([{ state: INITIAL_STATE, operator: null, stepNumber: 0 }]);
+    setAlgorithmStats(null);
+    setCurrentExplanation(null);
     
     if (isStepMode) {
        setGraphNodes([]);
@@ -236,6 +306,12 @@ export function useWaterJug() {
     setPlaybackSpeed,
     isStepMode,
     setIsStepMode,
+    algorithm,
+    setAlgorithm,
+    algorithmStats,
+    explainMode,
+    setExplainMode,
+    currentExplanation,
     manualPour,
     autoSolve,
     nextStep,
